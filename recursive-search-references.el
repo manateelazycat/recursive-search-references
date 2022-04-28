@@ -100,7 +100,7 @@
      (recursive-search-references-search-in-directory search-string recursive-search-references-ignore-dir)))
 
 (defun recursive-search-references-search-in-directory (search-string search-dir)
-  (let* ((search-command (format "rg %s %s --no-ignore -g '!node_modules' -g '!dist' --stats -q"
+  (let* ((search-command (format "rg -e %s %s --no-ignore -g '!node_modules' -g '!dist' --stats -q"
                                  (shell-quote-argument search-string)
                                  (shell-quote-argument search-dir)))
          (search-result (shell-command-to-string search-command))
