@@ -96,12 +96,22 @@
       captures)))
 
 (defun recursive-search-references-match-times-in-directory (search-string)
-  (let* ((search-command (format "rg --no-ignore -g '!node_modules' -g '!dist' -g '%s' '%s' %s --stats -q"
-                                 recursive-search-references-ignore-dir
-                                 search-string
-                                 recursive-search-references-search-dir))
-         (search-result (shell-command-to-string search-command)))
-    (string-to-number (nth 0 (split-string (nth 1 (split-string search-result "\n")))))))
+  (let* ((search-command (format "rg %s %s --no-ignore -g '!node_modules' -g '!dist' -g '!%s' --stats -q"
+                                 (shell-quote-argument search-string)
+                                 (shell-quote-argument recursive-search-references-search-dir)
+                                 (shell-quote-argument recursive-search-references-ignore-dir)))
+         (search-result (shell-command-to-string search-command))
+         (match-times (string-to-number (nth 0 (split-string (nth 1 (split-string search-result "\n")))))))
+    ;; (message search-command)
+    ;; (message "%s %s\n" search-string match-times)
+    match-times
+    ))
+
+(defun recursive-search-references-get-provide-name ()
+  (save-excursion
+    (when (search-forward-regexp "(provide\\s-'" nil t)
+      (thing-at-point 'symbol t)
+      )))
 
 (defun recursive-search-references-function (match-times-func location)
   (interactive)
@@ -112,8 +122,11 @@
                           (recursive-search-references-get-match-nodes "(function_declaration name: (identifier) @x)")
                           ))
          (function-names (mapcar #'tsc-node-text function-nodes))
-         (reference-functions (cl-remove-if #'(lambda (f) (<= (funcall match-times-func f) 1)) function-names)))
-    (message "*** %s" function-names)
+         (provide-name (recursive-search-references-get-provide-name))
+         (search-names (if provide-name
+                           (append function-names (list provide-name))
+                         function-names))
+         (reference-functions (cl-remove-if #'(lambda (f) (<= (funcall match-times-func f) 1)) search-names)))
     (if (> (length reference-functions) 0)
         (progn
           (message "Found below reference functions in current %s." location)
@@ -126,7 +139,7 @@
 (defun recursive-search-references ()
   (interactive)
   (setq recursive-search-references-search-dir (expand-file-name (read-directory-name "Recursive search references at directory: ")))
-  (setq recursive-search-references-ignore-dir default-directory)
+  (setq recursive-search-references-ignore-dir (file-name-nondirectory (directory-file-name default-directory)))
   (recursive-search-references-function 'recursive-search-references-match-times-in-directory "directory"))
 
 (provide 'recursive-search-references)
