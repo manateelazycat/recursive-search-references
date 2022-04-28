@@ -96,16 +96,16 @@
       captures)))
 
 (defun recursive-search-references-match-times-in-directory (search-string)
-  (let* ((search-command (format "rg %s %s --no-ignore -g '!node_modules' -g '!dist' -g '!%s' --stats -q"
+  (- (recursive-search-references-search-in-directory search-string recursive-search-references-search-dir)
+     (recursive-search-references-search-in-directory search-string recursive-search-references-ignore-dir)))
+
+(defun recursive-search-references-search-in-directory (search-string search-dir)
+  (let* ((search-command (format "rg %s %s --no-ignore -g '!node_modules' -g '!dist' --stats -q"
                                  (shell-quote-argument search-string)
-                                 (shell-quote-argument recursive-search-references-search-dir)
-                                 (shell-quote-argument recursive-search-references-ignore-dir)))
+                                 (shell-quote-argument search-dir)))
          (search-result (shell-command-to-string search-command))
          (match-times (string-to-number (nth 0 (split-string (nth 1 (split-string search-result "\n")))))))
-    ;; (message search-command)
-    ;; (message "%s %s\n" search-string match-times)
-    match-times
-    ))
+    match-times))
 
 (defun recursive-search-references-get-provide-name ()
   (save-excursion
@@ -133,13 +133,13 @@
           (message "--------")
           (mapcar #'(lambda (f) (message "%s" f)) reference-functions)
           (message "--------")
-          (message "Found %s reference functions, switch to buffer `*Messages*' to review." (length reference-functions)))
+          (message "Found reference functions, switch to buffer `*Messages*' to review."))
       (message "No references found in directory %s, you can remove current extension safely." location))))
 
 (defun recursive-search-references ()
   (interactive)
   (setq recursive-search-references-search-dir (expand-file-name (read-directory-name "Recursive search references at directory: ")))
-  (setq recursive-search-references-ignore-dir (file-name-nondirectory (directory-file-name default-directory)))
+  (setq recursive-search-references-ignore-dir (expand-file-name default-directory))
   (recursive-search-references-function 'recursive-search-references-match-times-in-directory "directory"))
 
 (provide 'recursive-search-references)
