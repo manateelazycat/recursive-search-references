@@ -96,7 +96,7 @@
       captures)))
 
 (defun recursive-search-references-match-times-in-directory (search-string)
-  (let* ((search-command (format "rg --no-ignore -g '!node_modules' -g '!dist' -g '%s' %s %s --stats -q"
+  (let* ((search-command (format "rg --no-ignore -g '!node_modules' -g '!dist' -g '%s' '%s' %s --stats -q"
                                  recursive-search-references-ignore-dir
                                  search-string
                                  recursive-search-references-search-dir))
