@@ -81,19 +81,20 @@
 
 ;;; Require
 (require 'cl-lib)
-(require 'tree-sitter)
+(require 'treesit)
 
 ;;; Code:
 
 (defvar recursive-search-references-search-dir nil)
 (defvar recursive-search-references-ignore-dir nil)
 
-(defun recursive-search-references-get-match-nodes (match-rule)
+(defun recursive-search-references-get-match-nodes (query)
   (ignore-errors
-    (let* ((query (tsc-make-query tree-sitter-language match-rule))
-           (root-node (tsc-root-node tree-sitter-tree))
-           (captures (mapcar #'cdr (tsc-query-captures query root-node #'tsc--buffer-substring-no-properties))))
-      captures)))
+    (mapcar #'(lambda (range)
+                (treesit-node-at (car range)))
+            (treesit-query-range
+             (treesit-node-language (treesit-buffer-root-node))
+             query))))
 
 (defun recursive-search-references-match-times-in-directory (search-string)
   (- (recursive-search-references-search-in-directory search-string recursive-search-references-search-dir)
@@ -116,17 +117,18 @@
 (defun recursive-search-references-function (match-times-func location)
   (interactive)
   (let* ((function-nodes (append
-                          (recursive-search-references-get-match-nodes "(function_definition name: (symbol) @x)")
-                          (recursive-search-references-get-match-nodes "(function_definition name: (identifier) @x)")
-                          (recursive-search-references-get-match-nodes "(method_declaration name: (identifier) @x)")
-                          (recursive-search-references-get-match-nodes "(function_declaration name: (identifier) @x)")
+                          (recursive-search-references-get-match-nodes '((function_definition name: (symbol) @x)))
+                          (recursive-search-references-get-match-nodes '((function_definition name: (identifier) @x)))
+                          (recursive-search-references-get-match-nodes '((method_declaration name: (identifier) @x)))
+                          (recursive-search-references-get-match-nodes '((function_declaration name: (identifier) @x)))
                           ))
-         (function-names (mapcar #'tsc-node-text function-nodes))
+         (function-names (mapcar #'treesit-node-text function-nodes))
          (provide-name (recursive-search-references-get-provide-name))
          (search-names (if provide-name
                            (append function-names (list provide-name))
                          function-names))
          (reference-functions (cl-remove-if #'(lambda (f) (<= (funcall match-times-func f) 1)) search-names)))
+
     (if (> (length reference-functions) 0)
         (progn
           (message "Found below reference functions in current %s." location)
